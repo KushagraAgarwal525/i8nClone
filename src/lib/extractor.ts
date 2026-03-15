@@ -100,13 +100,32 @@ function detectNonTranslatables(pairs: AlignedPair[]): ExtractionResult["nonTran
 }
 
 type ExtractionPayload = {
-  brandVoice?: string;
-  formality?: string;
-  tone?: string;
-  customTranslations?: Array<{ sourceTerm?: string; targetTerm?: string; hint?: string }>;
-  instructions?: Array<{ name?: string; text?: string }>;
-  scorers?: Array<{ name?: string; instruction?: string; check?: string; type?: string }>;
+  brandVoice?: unknown;
+  formality?: unknown;
+  tone?: unknown;
+  customTranslations?: Array<{ sourceTerm?: unknown; targetTerm?: unknown; hint?: unknown }>;
+  instructions?: Array<{ name?: unknown; text?: unknown }>;
+  scorers?: Array<{ name?: unknown; instruction?: unknown; check?: unknown; type?: unknown }>;
 };
+
+function toSafeText(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value).trim();
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item : ""))
+      .filter(Boolean)
+      .join(", ")
+      .trim();
+  }
+  if (value && typeof value === "object") {
+    const text = (value as { text?: unknown }).text;
+    if (typeof text === "string") return text.trim();
+  }
+  return "";
+}
 
 const WEAK_RULE_PATTERNS = [
   /maintain quality/i,
@@ -202,7 +221,7 @@ function normalizeInstructions(candidate: ExtractionPayload["instructions"]): Ex
   const output: ExtractionResult["instructions"] = [];
 
   for (const item of candidate) {
-    const text = cleanSentence(item?.text ?? "");
+    const text = cleanSentence(toSafeText(item?.text));
     if (!text || text.length < 24 || text.length > 220) continue;
     if (WEAK_RULE_PATTERNS.some((re) => re.test(text))) continue;
     if (PROMPT_LEAK_PATTERNS.some((re) => re.test(text))) continue;
@@ -211,7 +230,7 @@ function normalizeInstructions(candidate: ExtractionPayload["instructions"]): Ex
     seen.add(key);
 
     output.push({
-      name: toKebabLabel(item?.name ?? text),
+      name: toKebabLabel(toSafeText(item?.name) || text),
       text,
     });
   }
@@ -225,8 +244,8 @@ function normalizeScorers(candidate: ExtractionPayload["scorers"]): ExtractionRe
   const output: ExtractionResult["scorers"] = [];
 
   for (const item of candidate) {
-    const name = cleanSentence(item?.name ?? "");
-    const instruction = cleanSentence(item?.instruction ?? item?.check ?? "");
+    const name = cleanSentence(toSafeText(item?.name));
+    const instruction = cleanSentence(toSafeText(item?.instruction) || toSafeText(item?.check));
     if (!name || !instruction) continue;
     if (instruction.length < 30 || instruction.length > 260) continue;
     if (WEAK_RULE_PATTERNS.some((re) => re.test(instruction))) continue;
@@ -240,7 +259,7 @@ function normalizeScorers(candidate: ExtractionPayload["scorers"]): ExtractionRe
     output.push({
       name: toKebabLabel(name),
       instruction,
-      type: item?.type === "percentage" ? "percentage" : "boolean",
+      type: toSafeText(item?.type).toLowerCase() === "percentage" ? "percentage" : "boolean",
     });
   }
 
@@ -380,6 +399,23 @@ function isAnnouncementLike(text: string): boolean {
   );
 }
 
+function isCaseStudyNarrative(text: string): boolean {
+  const hasQuotedSpeech = /["'“”„][^"'“”„]{20,}["'“”„]/.test(text);
+  const hasAttribution = /(director|ceo|founder|head of|vp|manager|erklaert|erklärt|sagt|sagte|laut|according to)/i.test(
+    text
+  );
+  const hasStorySignals =
+    /(\bals\b|\bwhen\b|\bafter\b|\bwhile\b).{0,60}(expand|expansion|launch|partnerschaft|collaboration|zusammenarbeit|international)/i.test(
+      text
+    ) ||
+    /(years? (of )?expansion|sechs oder sieben jahre|suchte man|ermoeglicht es kunden|ermöglicht es kunden)/i.test(
+      text
+    );
+
+  // Reject promotional narratives that cite people/events instead of style guidance.
+  return [hasQuotedSpeech, hasAttribution, hasStorySignals].filter(Boolean).length >= 2;
+}
+
 function isTooCloseToAnyTarget(candidate: string, pairs: AlignedPair[]): boolean {
   const normalizedCandidate = candidate.toLowerCase().replace(/\s+/g, " ").trim();
 
@@ -415,6 +451,7 @@ function isStrongBrandVoice(candidate: string, samplePairs?: AlignedPair[]): boo
     return false;
   }
   if (isAnnouncementLike(text)) return false;
+  if (isCaseStudyNarrative(text)) return false;
   if (samplePairs && isTooCloseToAnyTarget(text, samplePairs)) return false;
 
   return true;
@@ -470,6 +507,7 @@ async function generateBrandVoiceParagraph(params: {
       "- Include concrete behavioral guidance for UI/marketing translation choices.",
       "- Must be evergreen style guidance, not topic/news summary.",
       "- Do NOT mention partnerships, announcements, launches, or specific events.",
+      "- Do NOT mention named people, job titles, customer stories, timelines, or quotes.",
       "- Do NOT copy or paraphrase any specific sentence from the pairs.",
       `- Formality hint: ${formality || "unknown"}`,
       `- Tone hint: ${tone || "unknown"}`,
@@ -534,9 +572,9 @@ export async function extractStyle(
   });
 
   const parsed = safeParseJSON<ExtractionPayload>(rawResponse, {});
-  const parsedBrandVoice = (parsed.brandVoice ?? "").trim();
-  const formality = normalizeFormalityLabel((parsed.formality ?? "unknown").trim() || "unknown", sample);
-  const tone = normalizeToneLabel((parsed.tone ?? "").trim(), sample);
+  const parsedBrandVoice = toSafeText(parsed.brandVoice);
+  const formality = normalizeFormalityLabel(toSafeText(parsed.formality) || "unknown", sample);
+  const tone = normalizeToneLabel(toSafeText(parsed.tone), sample);
 
   const scorers = normalizeScorers(parsed.scorers);
 
@@ -589,11 +627,16 @@ export async function extractStyle(
     nonTranslatables,
     customTranslations: Array.isArray(parsed.customTranslations)
       ? parsed.customTranslations
+          .map((c) => ({
+            sourceTerm: toSafeText(c.sourceTerm),
+            targetTerm: toSafeText(c.targetTerm),
+            hint: toSafeText(c.hint),
+          }))
           .filter((c) => c.sourceTerm && c.targetTerm)
           .map((c) => ({
-            sourceTerm: c.sourceTerm!,
-            targetTerm: c.targetTerm!,
-            hint: c.hint ?? "",
+            sourceTerm: c.sourceTerm,
+            targetTerm: c.targetTerm,
+            hint: c.hint,
           }))
       : [],
     instructions: finalInstructions,
