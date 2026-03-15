@@ -1,0 +1,122 @@
+{
+  "engines": [
+    {
+      "company": "Stripe",
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "engineConfig": {
+        "companyName": "Stripe",
+        "sourceLocale": "en",
+        "targetLocale": "de",
+        "brandVoice": {
+          "text": "Direct, developer-first clarity. Stripe speaks like an expert who respects the reader's intelligence — no filler, no marketing fluff. Technical terms are preserved exactly.",
+          "formality": "informal",
+          "tone": "technical"
+        },
+        "glossaryItems": [
+          { "sourceText": "Dashboard", "targetText": "Dashboard", "sourceLocale": "en", "targetLocale": "de", "type": "non_translatable", "hint": "Product name, never translate" },
+          { "sourceText": "payment intent", "targetText": "Zahlungsabsicht", "sourceLocale": "en", "targetLocale": "de", "type": "custom_translation", "hint": "Core API concept" },
+          { "sourceText": "webhook", "targetText": "Webhook", "sourceLocale": "en", "targetLocale": "de", "type": "non_translatable", "hint": "Technical term" },
+          { "sourceText": "API key", "targetText": "API-Schlüssel", "sourceLocale": "en", "targetLocale": "de", "type": "custom_translation", "hint": "Compound noun in German" },
+          { "sourceText": "Connect", "targetText": "Connect", "sourceLocale": "en", "targetLocale": "de", "type": "non_translatable", "hint": "Platform product name" }
+        ],
+        "instructions": [
+          { "name": "developer-mode", "text": "Address developers directly using 'du' (informal you). Never use 'Sie'.", "targetLocale": "de" },
+          { "name": "code-preservation", "text": "All code snippets, class names, parameter names, and CLI commands must remain in English exactly as written.", "targetLocale": "de" },
+          { "name": "technical-nouns", "text": "Product names (Dashboard, Connect, Radar, Terminal) are never translated.", "targetLocale": "de" }
+        ],
+        "scorers": [
+          { "name": "du-form-check", "type": "boolean", "instruction": "Verify that informal 'du' is used consistently, not 'Sie'.", "sourceLocale": "en", "targetLocale": "de" },
+          { "name": "code-integrity", "type": "boolean", "instruction": "All inline code and API references match the English source exactly.", "sourceLocale": "en", "targetLocale": "de" }
+        ]
+      }
+    },
+    {
+      "company": "Linear",
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "engineConfig": {
+        "companyName": "Linear",
+        "sourceLocale": "en",
+        "targetLocale": "de",
+        "brandVoice": {
+          "text": "Minimal and precise. Linear values speed and clarity above all else. Language is trimmed to its essentials — active voice, short sentences, no redundancy.",
+          "formality": "informal",
+          "tone": "minimalist"
+        },
+        "glossaryItems": [
+          { "sourceText": "Issue", "targetText": "Issue", "sourceLocale": "en", "targetLocale": "de", "type": "non_translatable", "hint": "Core feature name within product" },
+          { "sourceText": "Cycle", "targetText": "Zyklus", "sourceLocale": "en", "targetLocale": "de", "type": "custom_translation", "hint": "Sprint equivalent in Linear" },
+          { "sourceText": "Project", "targetText": "Projekt", "sourceLocale": "en", "targetLocale": "de", "type": "custom_translation" },
+          { "sourceText": "Triage", "targetText": "Triage", "sourceLocale": "en", "targetLocale": "de", "type": "non_translatable", "hint": "Product feature, keep English" }
+        ],
+        "instructions": [
+          { "name": "brevity-rule", "text": "Omit articles and filler words wherever grammatically acceptable in German. Prefer shorter phrasing.", "targetLocale": "de" },
+          { "name": "active-voice", "text": "Always prefer active voice. Passive constructions should only be used if there is no shorter active alternative.", "targetLocale": "de" }
+        ],
+        "scorers": [
+          { "name": "sentence-length", "type": "percentage", "instruction": "Score based on average words per sentence — shorter is better. Target under 15 words/sentence.", "sourceLocale": "en", "targetLocale": "de" }
+        ]
+      }
+    },
+    {
+      "company": "Vercel",
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "engineConfig": {
+        "companyName": "Vercel",
+        "sourceLocale": "en",
+        "targetLocale": "de",
+        "brandVoice": {
+          "text": "Aspirational and empowering. Vercel speaks to builders with optimism — every sentence suggests that building fast, beautiful things is within reach. Modern and forward-looking.",
+          "formality": "informal",
+          "tone": "inspirational"
+        },
+        "glossaryItems": [
+          { "sourceText": "deployment", "targetText": "Deployment", "sourceLocale": "en", "targetLocale": "de", "type": "non_translatable", "hint": "Industry term kept in English" },
+          { "sourceText": "Edge Network", "targetText": "Edge Network", "sourceLocale": "en", "targetLocale": "de", "type": "non_translatable", "hint": "Product concept" },
+          { "sourceText": "preview", "targetText": "Vorschau", "sourceLocale": "en", "targetLocale": "de", "type": "custom_translation" },
+          { "sourceText": "serverless", "targetText": "serverlos", "sourceLocale": "en", "targetLocale": "de", "type": "custom_translation", "hint": "Established German tech term" }
+        ],
+        "instructions": [
+          { "name": "optimism-tone", "text": "Frame all capabilities positively. Avoid negations — 'you can now...' not 'you no longer have to...'.", "targetLocale": "de" },
+          { "name": "du-form", "text": "Use informal 'du' to address users, matching the platform's developer-friendly tone.", "targetLocale": "de" }
+        ],
+        "scorers": [
+          { "name": "positive-framing", "type": "boolean", "instruction": "Check that no paragraph opens with a negation or a problem statement without an immediate solution.", "sourceLocale": "en", "targetLocale": "de" }
+        ]
+      }
+    },
+    {
+      "company": "Notion",
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "engineConfig": {
+        "companyName": "Notion",
+        "sourceLocale": "en",
+        "targetLocale": "de",
+        "brandVoice": {
+          "text": "Warm, accessible, and human. Notion speaks like a thoughtful colleague, not a tech product. It balances friendliness with competence, using everyday language that makes powerful features feel approachable.",
+          "formality": "informal",
+          "tone": "friendly"
+        },
+        "glossaryItems": [
+          { "sourceText": "workspace", "targetText": "Arbeitsbereich", "sourceLocale": "en", "targetLocale": "de", "type": "custom_translation" },
+          { "sourceText": "block", "targetText": "Block", "sourceLocale": "en", "targetLocale": "de", "type": "non_translatable", "hint": "Core building block concept" },
+          { "sourceText": "template", "targetText": "Vorlage", "sourceLocale": "en", "targetLocale": "de", "type": "custom_translation" },
+          { "sourceText": "database", "targetText": "Datenbank", "sourceLocale": "en", "targetLocale": "de", "type": "custom_translation" },
+          { "sourceText": "Notion AI", "targetText": "Notion AI", "sourceLocale": "en", "targetLocale": "de", "type": "non_translatable", "hint": "Product name" }
+        ],
+        "instructions": [
+          { "name": "approachability", "text": "Avoid jargon. If a technical term must be used, follow it with a brief plain-language explanation in parentheses on first mention.", "targetLocale": "de" },
+          { "name": "du-form", "text": "Use informal 'du' throughout. The Notion brand is casual and personable.", "targetLocale": "de" },
+          { "name": "feature-names", "text": "UI element names and feature names (Board, Timeline, Gallery) are kept in English.", "targetLocale": "de" }
+        ],
+        "scorers": [
+          { "name": "jargon-free", "type": "boolean", "instruction": "Flag any untranslated technical English term that is not in the non-translatables list.", "sourceLocale": "en", "targetLocale": "de" },
+          { "name": "reading-ease", "type": "percentage", "instruction": "Estimate readability for a non-technical German audience. Score 0-100 where 100 is most readable.", "sourceLocale": "en", "targetLocale": "de" }
+        ]
+      }
+    }
+  ]
+}
