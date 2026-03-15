@@ -1,0 +1,127 @@
+{
+  "sourceLocale": "en",
+  "targetLocale": "de",
+  "companyName": "shopify",
+  "brandVoice": {
+    "targetLocale": "de",
+    "text": "Du kannst mit Shopify ein flexibles E-Commerce-System für deine B2B- und D2C-Kunden betreiben. B2B-Kunden authentifizieren sich mit ihrer E-Mail-Adresse, bevor sie spezifische Informationen, Preise und Zahlungsbedingungen sehen. Shopify bietet dir eine Vielzahl von Funktionen, um deine B2B- und D2C-Strategie zu optimieren. Du kannst deine Produkte, Preise und Zahlungsbedingungen individuell an deine Kunden anpassen und deine Geschäftsabläufe effizienter gestalten. Mit Shopify kannst du deine Online-Store und -Checkout-Strategie an deine Kunden anpassen und deine Geschäftsziele erreichen.",
+    "formality": "informal-du",
+    "tone": ""
+  },
+  "glossaryItems": [
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Shopify",
+      "targetText": "Shopify",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Plus",
+      "targetText": "Plus",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Bank",
+      "targetText": "Bank",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Visa",
+      "targetText": "Visa",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Stripe",
+      "targetText": "Stripe",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Balance",
+      "targetText": "Balance",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Capital",
+      "targetText": "Capital",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "POS",
+      "targetText": "POS",
+      "type": "non_translatable",
+      "hint": "Technical acronym - kept in source language"
+    }
+  ],
+  "instructions": [
+    {
+      "name": "informal-du-address",
+      "targetLocale": "de",
+      "text": "Address users with the informal 'du' form (not 'Sie') consistently."
+    },
+    {
+      "name": "ai-acronym",
+      "targetLocale": "de",
+      "text": "Translate 'AI' as 'KI' consistently throughout."
+    },
+    {
+      "name": "preserve-brand-names",
+      "targetLocale": "de",
+      "text": "Keep brand and product names untranslated: 'Shopify', 'Plus', 'Bank', 'Visa'."
+    },
+    {
+      "name": "idiomatic-german",
+      "targetLocale": "de",
+      "text": "Use natural, idiomatic German phrasing rather than word-for-word translation."
+    },
+    {
+      "name": "conversational-tone",
+      "targetLocale": "de",
+      "text": "Keep the tone approachable and conversational - avoid overly technical or bureaucratic language."
+    }
+  ],
+  "scorers": [
+    {
+      "name": "brand-voice-match",
+      "instruction": "Verify the translation reflects a informal-du tone consistent with the source brand voice.",
+      "type": "boolean",
+      "sourceLocale": "en",
+      "targetLocale": "de"
+    },
+    {
+      "name": "formality-check",
+      "instruction": "Confirm formal register is maintained throughout (no informal contractions or casual phrasing).",
+      "type": "boolean",
+      "sourceLocale": "en",
+      "targetLocale": "de"
+    },
+    {
+      "name": "sie-form-check",
+      "instruction": "Verify all second-person references use the formal 'Sie' form, not 'du'.",
+      "type": "boolean",
+      "sourceLocale": "en",
+      "targetLocale": "de"
+    }
+  ]
+}

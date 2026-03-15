@@ -1,7 +1,7 @@
-﻿import { nvidiaChat } from "./nvidia";
+import { nvidiaChat } from "./nvidia";
 import type { AlignedPair, ExtractionResult } from "./types";
 
-const MAX_PAIRS = 15;
+const MAX_PAIRS = 22;
 const MAX_PAIR_TEXT_CHARS = 280;
 
 /** Deduplicate, quality-filter, and select the best pairs for style extraction. */
@@ -36,14 +36,11 @@ function formatPairs(pairs: AlignedPair[]): string {
   const compact = (text: string) => {
     const oneLine = text.replace(/\s+/g, " ").trim();
     if (oneLine.length <= MAX_PAIR_TEXT_CHARS) return oneLine;
-    return `${oneLine.slice(0, MAX_PAIR_TEXT_CHARS - 1)}…`;
+    return `${oneLine.slice(0, MAX_PAIR_TEXT_CHARS - 1)}...`;
   };
 
   return pairs
-    .map(
-      (p, i) =>
-        `${i + 1}. "${compact(p.sourceText)}" → "${compact(p.targetText)}"`,
-    )
+    .map((p, i) => `${i + 1}. "${compact(p.sourceText)}" -> "${compact(p.targetText)}"`)
     .join("\n");
 }
 
@@ -54,11 +51,20 @@ function formatPairs(pairs: AlignedPair[]): string {
 function safeParseJSON<T>(text: string, fallback: T): T {
   const cleaned = text?.trim() ?? "";
   // Try direct parse first
-  try { return JSON.parse(cleaned); } catch { /* continue */ }
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // continue
+  }
+
   // Try to extract a JSON array or object substring
   const match = cleaned.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
   if (match) {
-    try { return JSON.parse(match[0]); } catch { /* continue */ }
+    try {
+      return JSON.parse(match[0]);
+    } catch {
+      // continue
+    }
   }
   return fallback;
 }
@@ -68,15 +74,12 @@ function safeParseJSON<T>(text: string, fallback: T): T {
  * that appear verbatim (unchanged) in the target text across multiple pairs.
  * This is more reliable than LLM-based detection for this task.
  */
-function detectNonTranslatables(
-  pairs: AlignedPair[]
-): ExtractionResult["nonTranslatables"] {
+function detectNonTranslatables(pairs: AlignedPair[]): ExtractionResult["nonTranslatables"] {
   const freq = new Map<string, number>();
 
   for (const pair of pairs) {
     // Candidates: capitalized words (brand names) and all-caps acronyms
-    const candidates =
-      pair.sourceText.match(/\b([A-Z][a-zA-Z]{1,}|[A-Z]{2,})\b/g) ?? [];
+    const candidates = pair.sourceText.match(/\b([A-Z][a-zA-Z]{1,}|[A-Z]{2,})\b/g) ?? [];
     for (const c of candidates) {
       if (pair.targetText.includes(c)) {
         freq.set(c, (freq.get(c) ?? 0) + 1);
@@ -91,8 +94,8 @@ function detectNonTranslatables(
     .map(([term]) => ({
       term,
       reason: /^[A-Z]{2,}$/.test(term)
-        ? "Technical acronym — kept in source language"
-        : "Brand or product name — kept in source language",
+        ? "Technical acronym - kept in source language"
+        : "Brand or product name - kept in source language",
     }));
 }
 
@@ -112,6 +115,18 @@ const WEAK_RULE_PATTERNS = [
   /translate accurately/i,
   /keep meaning/i,
   /be concise/i,
+  /translate naturally/i,
+  /high-quality and clear writing/i,
+];
+
+const PROMPT_LEAK_PATTERNS = [
+  /du\/dein\/dich/i,
+  /sie\/ihr/i,
+  /dashboard,?\s*connect,?\s*radar/i,
+  /glossary terms appear exactly as specified/i,
+  /second-person pronouns/i,
+  /use informal '?du'?/i,
+  /keep product ui labels/i,
 ];
 
 function toKebabLabel(input: string): string {
@@ -128,9 +143,60 @@ function cleanSentence(input: string): string {
   return input.replace(/\s+/g, " ").trim();
 }
 
-function normalizeInstructions(
-  candidate: ExtractionPayload["instructions"],
-): ExtractionResult["instructions"] {
+function inferFormalityFromPairs(pairs: AlignedPair[]): string {
+  let duHits = 0;
+  let sieHits = 0;
+
+  for (const pair of pairs) {
+    if (/\b(du|dein|dich|dir|deine|deinen|deiner)\b/i.test(pair.targetText)) duHits += 1;
+    if (/\b(Sie|Ihnen|Ihr|Ihre|Ihrem|Ihren)\b/.test(pair.targetText)) sieHits += 1;
+  }
+
+  if (duHits >= 2 && duHits > sieHits) return "informal-du";
+  if (sieHits >= 2 && sieHits > duHits) return "formal-sie";
+  return "";
+}
+
+function inferToneFromPairs(pairs: AlignedPair[]): string {
+  let technicalSignals = 0;
+  let friendlySignals = 0;
+
+  for (const pair of pairs) {
+    const text = `${pair.sourceText} ${pair.targetText}`.toLowerCase();
+    if (/\b(api|sdk|webhook|oauth|token|endpoint|cli|dashboard|integration|auth)\b/.test(text)) {
+      technicalSignals += 1;
+    }
+    if (/\b(welcome|hello|let's|together|easily|simple|friendly|help)\b/.test(text)) {
+      friendlySignals += 1;
+    }
+  }
+
+  if (technicalSignals >= Math.max(3, friendlySignals + 1)) return "technical, direct";
+  if (friendlySignals >= Math.max(3, technicalSignals + 1)) return "friendly, approachable";
+  return "";
+}
+
+function normalizeFormalityLabel(raw: string, pairs: AlignedPair[]): string {
+  const value = raw.trim();
+  if (!value || /^unknown$/i.test(value) || /^neutral-?professional$/i.test(value)) {
+    return inferFormalityFromPairs(pairs);
+  }
+  return value;
+}
+
+function normalizeToneLabel(raw: string, pairs: AlignedPair[]): string {
+  const value = raw.trim();
+  if (!value) return inferToneFromPairs(pairs);
+
+  // This common anchor phrase is treated as low-confidence and replaced with inferred tone.
+  if (/^concise,? technical,? direct$/i.test(value)) {
+    return inferToneFromPairs(pairs);
+  }
+
+  return value;
+}
+
+function normalizeInstructions(candidate: ExtractionPayload["instructions"]): ExtractionResult["instructions"] {
   if (!Array.isArray(candidate)) return [];
   const seen = new Set<string>();
   const output: ExtractionResult["instructions"] = [];
@@ -139,6 +205,7 @@ function normalizeInstructions(
     const text = cleanSentence(item?.text ?? "");
     if (!text || text.length < 24 || text.length > 220) continue;
     if (WEAK_RULE_PATTERNS.some((re) => re.test(text))) continue;
+    if (PROMPT_LEAK_PATTERNS.some((re) => re.test(text))) continue;
     const key = text.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
@@ -152,9 +219,7 @@ function normalizeInstructions(
   return output.slice(0, 6);
 }
 
-function normalizeScorers(
-  candidate: ExtractionPayload["scorers"],
-): ExtractionResult["scorers"] {
+function normalizeScorers(candidate: ExtractionPayload["scorers"]): ExtractionResult["scorers"] {
   if (!Array.isArray(candidate)) return [];
   const seen = new Set<string>();
   const output: ExtractionResult["scorers"] = [];
@@ -165,6 +230,8 @@ function normalizeScorers(
     if (!name || !instruction) continue;
     if (instruction.length < 30 || instruction.length > 260) continue;
     if (WEAK_RULE_PATTERNS.some((re) => re.test(instruction))) continue;
+    if (PROMPT_LEAK_PATTERNS.some((re) => re.test(instruction))) continue;
+    if (PROMPT_LEAK_PATTERNS.some((re) => re.test(name))) continue;
 
     const key = `${name.toLowerCase()}|||${instruction.toLowerCase()}`;
     if (seen.has(key)) continue;
@@ -210,9 +277,7 @@ function buildDefaultInstructions(
     }
   }
 
-  const hasAiKi = pairs.some(
-    (p) => p.sourceText.includes("AI") && p.targetText.includes("KI")
-  );
+  const hasAiKi = pairs.some((p) => p.sourceText.includes("AI") && p.targetText.includes("KI"));
   if (hasAiKi) {
     instructions.push({
       name: "ai-acronym",
@@ -241,7 +306,7 @@ function buildDefaultInstructions(
   if (formality.toLowerCase().includes("informal") || formality.toLowerCase().includes("casual")) {
     instructions.push({
       name: "conversational-tone",
-      text: "Keep the tone approachable and conversational — avoid overly technical or bureaucratic language.",
+      text: "Keep the tone approachable and conversational - avoid overly technical or bureaucratic language.",
     });
   }
 
@@ -288,6 +353,157 @@ function buildDefaultBrandVoice(
   ].join(" ");
 }
 
+function tokenizeForOverlap(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length >= 4);
+}
+
+function overlapRatio(a: string, b: string): number {
+  const aTokens = new Set(tokenizeForOverlap(a));
+  const bTokens = new Set(tokenizeForOverlap(b));
+  if (aTokens.size === 0 || bTokens.size === 0) return 0;
+
+  let intersection = 0;
+  for (const token of aTokens) {
+    if (bTokens.has(token)) intersection += 1;
+  }
+
+  return intersection / Math.min(aTokens.size, bTokens.size);
+}
+
+function isAnnouncementLike(text: string): boolean {
+  return /(partnership|announce|announcement|press release|today we|launch(ed)? with|new partnership|collaboration|joint|partnerschaft|ankuendig|bekanntgabe|wir freuen uns|pressemitteilung)/i.test(
+    text
+  );
+}
+
+function isTooCloseToAnyTarget(candidate: string, pairs: AlignedPair[]): boolean {
+  const normalizedCandidate = candidate.toLowerCase().replace(/\s+/g, " ").trim();
+
+  for (const pair of pairs) {
+    const target = pair.targetText.toLowerCase().replace(/\s+/g, " ").trim();
+    if (target.length < 45) continue;
+
+    // Direct substring copying of long target sentence.
+    if (normalizedCandidate.includes(target) || target.includes(normalizedCandidate)) {
+      return true;
+    }
+
+    // High lexical overlap indicates paraphrase/copy instead of style abstraction.
+    if (overlapRatio(candidate, pair.targetText) >= 0.66) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function isStrongBrandVoice(candidate: string, samplePairs?: AlignedPair[]): boolean {
+  const text = candidate.trim();
+  if (!text || /^unknown$/i.test(text) || text.length < 120) return false;
+
+  const sentenceCount = text
+    .split(/[.!?]+/)
+    .map((s) => s.trim())
+    .filter(Boolean).length;
+
+  if (sentenceCount < 3) return false;
+  if (/\b(as an ai|cannot provide|generic style|neutral style)\b/i.test(text)) {
+    return false;
+  }
+  if (isAnnouncementLike(text)) return false;
+  if (samplePairs && isTooCloseToAnyTarget(text, samplePairs)) return false;
+
+  return true;
+}
+
+async function generateBrandVoiceParagraph(params: {
+  sourceLocale: string;
+  targetLocale: string;
+  samplePairs: AlignedPair[];
+  pairsList: string;
+  formality: string;
+  tone: string;
+  instructions: ExtractionResult["instructions"];
+  nonTranslatables: ExtractionResult["nonTranslatables"];
+}): Promise<string | null> {
+  const {
+    sourceLocale,
+    targetLocale,
+    samplePairs,
+    pairsList,
+    formality,
+    tone,
+    instructions,
+    nonTranslatables,
+  } = params;
+
+  const instructionHints = instructions
+    .slice(0, 4)
+    .map((inst) => `- ${inst.text}`)
+    .join("\n");
+
+  const lockedTerms = nonTranslatables
+    .slice(0, 6)
+    .map((term) => term.term)
+    .join(", ");
+
+  const bannedSnippets = samplePairs
+    .map((p) => p.targetText.trim())
+    .filter((text) => text.length >= 45)
+    .slice(0, 4)
+    .map((text) => `- "${text.replace(/\s+/g, " ").slice(0, 140)}"`)
+    .join("\n");
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const prompt = [
+      `You are writing a localization brand voice paragraph for ${targetLocale}.`,
+      `Input pairs are ${sourceLocale} -> ${targetLocale}.`,
+      "Output format: return only plain text paragraph (no JSON, no bullets).",
+      "Requirements:",
+      "- 4 sentences.",
+      "- 130-260 characters per sentence.",
+      "- Mention register/formality and tone explicitly.",
+      "- Include concrete behavioral guidance for UI/marketing translation choices.",
+      "- Must be evergreen style guidance, not topic/news summary.",
+      "- Do NOT mention partnerships, announcements, launches, or specific events.",
+      "- Do NOT copy or paraphrase any specific sentence from the pairs.",
+      `- Formality hint: ${formality || "unknown"}`,
+      `- Tone hint: ${tone || "unknown"}`,
+      lockedTerms ? `- Preserve terms like: ${lockedTerms}.` : "",
+      instructionHints ? `- Instruction hints:\n${instructionHints}` : "",
+      bannedSnippets ? `- Never reuse snippets like:\n${bannedSnippets}` : "",
+      attempt > 0 ? "- Previous draft was too close to source text. Abstract style only." : "",
+      "\nPAIRS:\n",
+      pairsList,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const response = await nvidiaChat(
+      "You are an expert localization strategist. Return only the requested paragraph.",
+      prompt,
+      {
+        step: "extract-brand-voice",
+        maxTokens: 1100,
+        temperature: attempt === 0 ? 0.25 : 0.35,
+        topP: 0.8,
+        retries: 2,
+      }
+    );
+
+    const text = response.replace(/^\"|\"$/g, "").trim();
+    if (isStrongBrandVoice(text, samplePairs)) {
+      return text;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Extract localization style from aligned translation pairs using NVIDIA-hosted LLMs.
  *
@@ -303,15 +519,15 @@ export async function extractStyle(
   const sample = preparePairs(pairs);
   const pairsList = formatPairs(sample);
   const n = sample.length;
-  const nonTranslatables = detectNonTranslatables(pairs);
+  const nonTranslatables = detectNonTranslatables(sample);
 
   const systemPrompt =
     "You are a senior localization engineer. Return valid JSON only. No markdown, no prose outside JSON.";
-  const userPrompt = `Analyze ${n} aligned translation pairs (${sourceLocale} -> ${targetLocale}).\n\nReturn EXACTLY one JSON object with this schema:\n{\n  "brandVoice": string,\n  "formality": string,\n  "tone": string,\n  "customTranslations": [{"sourceTerm": string, "targetTerm": string, "hint": string}],\n  "instructions": [{"name": string, "text": string}],\n  "scorers": [{"name": string, "instruction": string, "type": "boolean" | "percentage"}]\n}\n\nHard constraints:\n- brandVoice: 3-5 sentences, specific to this site voice.\n- formality: one short label (examples: \"informal-du\", \"formal-sie\", \"neutral-professional\").\n- tone: 2-5 adjectives/phrases (examples: \"concise, technical, direct\").\n- customTranslations: only domain/product terms with strong evidence from pairs.\n- instructions: 3-6 atomic and testable rules. Avoid generic advice.\n- scorers: 2-4 objective checks that a reviewer model can evaluate deterministically.\n\nInstruction quality bar:\n- Good: \"Use informal 'du' in all second-person imperatives.\"\n- Good: \"Keep product UI labels Dashboard, Connect, Radar untranslated.\"\n- Bad: \"Maintain quality and clarity.\"\n- Bad: \"Translate naturally.\"\n\nScorer quality bar:\n- Good: \"Check that all second-person pronouns are 'du/dein/dich', never 'Sie/Ihr'.\"\n- Good: \"Verify glossary terms appear exactly as specified for mapped source terms.\"\n- Bad: \"Score overall translation quality.\"\n\nIf uncertain, return empty arrays for that section instead of guessing.\n\nPAIRS:\n${pairsList}`;
+  const userPrompt = `Analyze ${n} aligned translation pairs (${sourceLocale} -> ${targetLocale}).\n\nReturn EXACTLY one JSON object with this schema:\n{\n  "brandVoice": string,\n  "formality": string,\n  "tone": string,\n  "customTranslations": [{"sourceTerm": string, "targetTerm": string, "hint": string}],\n  "instructions": [{"name": string, "text": string}],\n  "scorers": [{"name": string, "instruction": string, "type": "boolean" | "percentage"}]\n}\n\nHard constraints:\n- brandVoice: REQUIRED. 4 sentences, highly specific to this site voice, no generic wording, minimum 120 characters total.\n- formality: one short label derived from evidence in the pairs.\n- tone: 2-5 adjectives/phrases derived from evidence in the pairs.\n- customTranslations: only domain/product terms with strong evidence from pairs.\n- instructions: 3-6 atomic and testable rules. Avoid generic advice.\n- scorers: 2-4 objective checks that a reviewer model can evaluate deterministically.\n\nInstruction quality bar:\n- Good: site-specific rule grounded in recurring UI or product copy patterns.\n- Bad: generic writing advice without concrete site behavior.\n\nScorer quality bar:\n- Good: measurable check tied to glossary consistency, terminology, or register consistency observed in pairs.\n- Bad: generic "quality" scoring rubric.\n\nDo NOT copy any literal example phrasing from this prompt. Build rules only from the provided pairs.\nIf uncertain for optional sections, return empty arrays. brandVoice should still be provided.\n\nPAIRS:\n${pairsList}`;
 
   const rawResponse = await nvidiaChat(systemPrompt, userPrompt, {
     step: "extract-style",
-    maxTokens: 2400,
+    maxTokens: 2800,
     temperature: 0.2,
     topP: 0.7,
     retries: 2,
@@ -319,8 +535,8 @@ export async function extractStyle(
 
   const parsed = safeParseJSON<ExtractionPayload>(rawResponse, {});
   const parsedBrandVoice = (parsed.brandVoice ?? "").trim();
-  const formality = (parsed.formality ?? "unknown").trim() || "unknown";
-  const tone = (parsed.tone ?? "").trim();
+  const formality = normalizeFormalityLabel((parsed.formality ?? "unknown").trim() || "unknown", sample);
+  const tone = normalizeToneLabel((parsed.tone ?? "").trim(), sample);
 
   const scorers = normalizeScorers(parsed.scorers);
 
@@ -337,25 +553,41 @@ export async function extractStyle(
       ? rawInstructions
       : buildDefaultInstructions(sample, formality, targetLocale, nonTranslatables);
 
-  const brandVoice =
-    parsedBrandVoice &&
-    !/^unknown$/i.test(parsedBrandVoice) &&
-    parsedBrandVoice.length >= 60
-      ? parsedBrandVoice
-      : buildDefaultBrandVoice(
-          formality,
-          tone,
-          targetLocale,
-          finalInstructions,
-          nonTranslatables
-        );
+  let brandVoice = isStrongBrandVoice(parsedBrandVoice, sample) ? parsedBrandVoice : "";
+
+  if (!brandVoice) {
+    const generatedBrandVoice = await generateBrandVoiceParagraph({
+      sourceLocale,
+      targetLocale,
+      samplePairs: sample,
+      pairsList,
+      formality,
+      tone,
+      instructions: finalInstructions,
+      nonTranslatables,
+    }).catch(() => null);
+
+    if (generatedBrandVoice) {
+      brandVoice = generatedBrandVoice;
+    }
+  }
+
+  if (!brandVoice) {
+    brandVoice = buildDefaultBrandVoice(
+      formality,
+      tone,
+      targetLocale,
+      finalInstructions,
+      nonTranslatables
+    );
+  }
 
   return {
     brandVoice,
     formality,
     tone,
     nonTranslatables,
-    customTranslations: (Array.isArray(parsed.customTranslations)
+    customTranslations: Array.isArray(parsed.customTranslations)
       ? parsed.customTranslations
           .filter((c) => c.sourceTerm && c.targetTerm)
           .map((c) => ({
@@ -363,7 +595,7 @@ export async function extractStyle(
             targetTerm: c.targetTerm!,
             hint: c.hint ?? "",
           }))
-      : []),
+      : [],
     instructions: finalInstructions,
     scorers: finalScorers,
   };

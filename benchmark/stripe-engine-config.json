@@ -1,0 +1,93 @@
+{
+  "sourceLocale": "en",
+  "targetLocale": "de",
+  "companyName": "stripe",
+  "brandVoice": {
+    "targetLocale": "de",
+    "text": "Write de copy in a formal register with a expert, forward-thinking voice. Keep messaging precise, technically trustworthy, and action-oriented for product UI and developer-facing text. Follow these style constraints consistently: Use the same terms and phrases throughout the translation to maintain consistency and clarity. Consider the specific needs and preferences of the target market when translating product features and benefits. Preserve established product terminology and non-translatable terms such as Stripe, SaaS.",
+    "formality": "formal",
+    "tone": "expert, forward-thinking"
+  },
+  "glossaryItems": [
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Stripe",
+      "targetText": "Stripe",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "SaaS",
+      "targetText": "SaaS",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "vertical SaaS",
+      "targetText": "vertikale SaaS-Plattformen",
+      "type": "custom_translation",
+      "hint": "recurring feature"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "agentic commerce",
+      "targetText": "Agentic Commerce",
+      "type": "custom_translation",
+      "hint": "recurring feature"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "stablecoin",
+      "targetText": "Stablecoins",
+      "type": "custom_translation",
+      "hint": "recurring feature"
+    }
+  ],
+  "instructions": [
+    {
+      "name": "ensure-consistent-terminology",
+      "targetLocale": "de",
+      "text": "Use the same terms and phrases throughout the translation to maintain consistency and clarity."
+    },
+    {
+      "name": "adapt-to-local-market-conditions",
+      "targetLocale": "de",
+      "text": "Consider the specific needs and preferences of the target market when translating product features and benefits."
+    },
+    {
+      "name": "highlight-unique-selling-points",
+      "targetLocale": "de",
+      "text": "Emphasize the features and benefits that set the product apart from competitors."
+    }
+  ],
+  "scorers": [
+    {
+      "name": "terminology-consistency",
+      "instruction": "Check for consistency in terminology throughout the translation.",
+      "type": "boolean",
+      "sourceLocale": "en",
+      "targetLocale": "de"
+    },
+    {
+      "name": "cultural-relevance",
+      "instruction": "Verify that the translation is culturally relevant and respectful of the target audience.",
+      "type": "boolean",
+      "sourceLocale": "en",
+      "targetLocale": "de"
+    },
+    {
+      "name": "product-feature-accuracy",
+      "instruction": "Ensure that the translation accurately conveys the features and benefits of the product.",
+      "type": "percentage",
+      "sourceLocale": "en",
+      "targetLocale": "de"
+    }
+  ]
+}

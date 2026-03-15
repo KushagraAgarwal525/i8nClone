@@ -1,0 +1,94 @@
+{
+  "sourceLocale": "en",
+  "targetLocale": "de",
+  "companyName": "atlassian",
+  "brandVoice": {
+    "targetLocale": "de",
+    "text": "Die Kommunikation mit deinen Kunden sollte transparent, effizient und flexibel sein. Nutze Branchen-Frameworks wie DORA, SPACE und DX Core 4, um die Produktivität und Wirkung von KI zu messen. Automatisiere wiederholende Aufgaben und konzentriere dich auf wichtige Aufgaben. Verwende Atlassian Cloud, um Flexibilität, längerfristige Kosteneinsparungen und Effizienz zu bieten.",
+    "formality": "formal",
+    "tone": "transparent, efficient, flexible"
+  },
+  "glossaryItems": [
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Gartner",
+      "targetText": "Gartner",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Atlassian",
+      "targetText": "Atlassian",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Jira",
+      "targetText": "Jira",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "tooling",
+      "targetText": "Hardware und Software",
+      "type": "custom_translation",
+      "hint": "Domain/product term"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "vendor",
+      "targetText": "Anbieter",
+      "type": "custom_translation",
+      "hint": "Domain/product term"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "productivity",
+      "targetText": "Produktivität",
+      "type": "custom_translation",
+      "hint": "Domain/product term"
+    }
+  ],
+  "instructions": [
+    {
+      "name": "automate-repetitive-tasks",
+      "targetLocale": "de",
+      "text": "Automatisiere wiederholende Aufgaben"
+    },
+    {
+      "name": "focus-on-high-value-tasks",
+      "targetLocale": "de",
+      "text": "Konzentriere dich auf wichtige Aufgaben"
+    },
+    {
+      "name": "use-industry-frameworks",
+      "targetLocale": "de",
+      "text": "Nutze Branchen-Frameworks"
+    }
+  ],
+  "scorers": [
+    {
+      "name": "check-for-domain-product-terms",
+      "instruction": "Überprüfe, ob die Terme für den Bereich oder Produkt verwendet werden",
+      "type": "boolean",
+      "sourceLocale": "en",
+      "targetLocale": "de"
+    },
+    {
+      "name": "verify-transparency-and-efficiency",
+      "instruction": "Überprüfe, ob der Prozess transparent und effizient ist",
+      "type": "percentage",
+      "sourceLocale": "en",
+      "targetLocale": "de"
+    }
+  ]
+}

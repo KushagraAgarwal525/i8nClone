@@ -1,36 +1,77 @@
 # EngineClone
 
-> Reverse-engineer any company's translation engine in seconds.
+> Reverse-engineer any company's localization style into a deployable translation engine.
 
-Point at two URLs — source and translated — and get a complete, deployable localization engine that matches the brand voice, glossary, tone, and quality rules of the original. Uses [Lingo.dev](https://lingo.dev) for locale detection + baseline translation and NVIDIA-hosted LLMs for style extraction and cloned preview.
+Stripe spent years tuning their German copy style. Atlassian, Salesforce, and Shopify did too.
+EngineClone turns that visible but hard-to-extract translation behavior into a real engine config in seconds: brand voice, glossary, instructions, and scorer rules ready for deployment.
 
-## Live Demo
+Built for the [Lingo.dev Hackathon](https://lingo.dev), with Lingo.dev for localization workflows and NVIDIA-hosted LLMs for extraction and style cloning.
 
-```
-/         → Clone any translation engine
-/compare  → See pre-generated engines for Stripe, Linear, Vercel, Notion
-```
+## Why This Exists
 
-## How It Works
+Most teams do not fail at translation because of vocabulary. They fail on consistency:
 
-1. **Crawl** — Fetches both source and translated URLs, extracts visible text nodes with DOM paths
-2. **Align** — 3-pass algorithm matches source/target pairs (exact path → normalized → positional)
-3. **Extract** — NVIDIA-hosted LLM analyzes aligned pairs and returns structured style metadata (brand voice, formality, tone, glossary candidates, instructions, scorers)
-4. **Preview** — Two side-by-side translations: generic Lingo.dev vs. cloned engine
-5. **Deploy** — Copyable MCP commands + downloadable JSON for Lingo.dev setup
+- Wrong formality ("du" vs "Sie")
+- Brand terms translated when they should not be
+- Product terminology changing across screens
+- Tone drifting between marketing and UI copy
+
+EngineClone crawls source and translated pages, learns those hidden rules from real copy, and outputs a reusable engine config you can apply to your own product.
+
+## Live App
+
+- `/` -> Clone a translation engine from URL pairs
+- `/compare` -> Compare benchmark engines for Atlassian, Salesforce, Shopify, Stripe
+
+## Core Flow
+
+1. Crawl
+- Fetch source and translated pages
+- Extract visible text nodes with DOM paths
+
+2. Align
+- 3-pass matcher: exact path -> normalized path -> positional fallback
+
+3. Extract
+- NVIDIA-hosted model returns structured style metadata
+- Includes brand voice paragraph, formality, tone, glossary candidates, instructions, and scorers
+
+4. Preview
+- Side-by-side generic localization vs cloned engine output
+
+5. Deploy
+- Deterministic MCP runbook snippets + downloadable JSON config for Lingo.dev setup
+
+## What Makes It Production-Ready
+
+- Two-pass brand voice generation (primary extraction + targeted regeneration)
+- Anti-copy safeguards to avoid parroting website announcement text
+- Prompt-leak filtering for generic anchor phrases
+- Evidence-based formality and tone normalization
+- Deterministic deployment path (no LLM planning for deploy commands)
+- Optional anonymous usage tracking via Supabase
 
 ## Tech Stack
 
-- **Next.js 15** — App Router, TypeScript
-- **lingo.dev SDK** — Locale recognition + baseline localization preview
-- **OpenAI SDK + NVIDIA API** — Style extraction + cloned-style preview generation
-- **Supabase** — Anonymous usage tracking (fire-and-forget inserts)
-- **Cheerio** — HTML parsing and text extraction
-- **Tailwind CSS 4** — Raw utility classes, dark theme
+- Next.js 16 (App Router, TypeScript)
+- Tailwind CSS 4
+- lingo.dev SDK (locale handling + baseline localization)
+- OpenAI SDK against NVIDIA API (extraction + cloned preview)
+- Cheerio (HTML parsing)
+- Supabase (optional usage stats)
 
-## Setup
+## Benchmarks Included
 
-### 1. Clone & Install
+The compare page is wired to real generated configs in `benchmark/`:
+
+- Atlassian (`en -> de`)
+- Salesforce (`en -> de`)
+- Shopify (`en -> de`)
+- Stripe (`en -> de`)
+
+## Quick Start
+
+### 1. Install
 
 ```bash
 git clone https://github.com/your-username/engine-clone
@@ -38,9 +79,9 @@ cd engine-clone
 npm install
 ```
 
-### 2. Environment Variables
+### 2. Configure Environment
 
-Copy `.env.example` to `.env.local` and fill in the values:
+Copy `.env.example` to `.env.local` and provide keys:
 
 ```bash
 cp .env.example .env.local
@@ -55,21 +96,29 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 ```
 
-Get your Lingo.dev API key at [lingo.dev/dashboard](https://lingo.dev/dashboard). Generate your NVIDIA API key from your NVIDIA API dashboard.
+### 3. Run Dev Server
 
-### 3. Supabase Setup (optional — for usage stats)
+```bash
+npm run dev
+```
 
-Run this in your Supabase SQL editor:
+Open [http://localhost:4000](http://localhost:4000).
+
+## Optional: Supabase Usage Stats
+
+Run in Supabase SQL editor:
 
 ```sql
 CREATE TABLE IF NOT EXISTS public.engine_runs (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   created_at timestamptz DEFAULT now() NOT NULL,
+  source_url text,
   company_name text,
   source_locale text,
   target_locale text,
-  pair_count integer,
-  glossary_count integer
+  glossary_count integer,
+  instruction_count integer,
+  non_translatable_count integer
 );
 
 ALTER TABLE public.engine_runs ENABLE ROW LEVEL SECURITY;
@@ -78,115 +127,149 @@ CREATE POLICY "anon_insert" ON public.engine_runs FOR INSERT TO anon WITH CHECK 
 CREATE OR REPLACE FUNCTION get_top_company()
 RETURNS TABLE(name text, count bigint)
 LANGUAGE sql SECURITY DEFINER AS $$
-  SELECT company_name as name, COUNT(*) as count
+  SELECT company_name AS name, COUNT(*) AS count
   FROM public.engine_runs
   WHERE company_name IS NOT NULL
-  GROUP BY company_name ORDER BY count DESC LIMIT 1;
+  GROUP BY company_name
+  ORDER BY count DESC
+  LIMIT 1;
 $$;
 
 CREATE OR REPLACE FUNCTION get_top_locale()
 RETURNS TABLE(locale text, count bigint)
 LANGUAGE sql SECURITY DEFINER AS $$
-  SELECT target_locale as locale, COUNT(*) as count
+  SELECT target_locale AS locale, COUNT(*) AS count
   FROM public.engine_runs
   WHERE target_locale IS NOT NULL
-  GROUP BY target_locale ORDER BY count DESC LIMIT 1;
+  GROUP BY target_locale
+  ORDER BY count DESC
+  LIMIT 1;
 $$;
 ```
 
-### 4. Run
+## API Surface
 
-```bash
-npm run dev
-```
+### POST `/api/crawl`
 
-Open [http://localhost:3000](http://localhost:3000).
+Request:
 
-## Project Structure
-
-```
-src/
-  lib/
-    lingo.ts          — SDK singleton
-    supabase.ts       — Supabase client
-    types.ts          — Shared TypeScript interfaces
-    crawler.ts        — HTML fetching and text extraction
-    aligner.ts        — DOM-path alignment algorithm
-    extractor.ts      — Style extraction via localizeObject
-    engine-config.ts  — ExtractionResult → EngineConfig mapper
-    mcp-deploy.ts     — MCP command generation and JSON export
-  app/
-    page.tsx          — Main extraction flow
-    layout.tsx        — Root layout and metadata
-    compare/page.tsx  — Static engine comparison
-    api/
-      crawl/          — Crawl + align endpoint
-      extract/        — Extract + track endpoint
-      preview/        — Generic vs. cloned preview
-      stats/          — Usage statistics
-  components/
-    url-input-form
-    extraction-stepper
-    engine-display
-    brand-voice-card
-    glossary-table
-    instructions-list
-    scorer-badges
-    translation-preview
-    deploy-button
-    comparison-table
-data/
-  sample-engines.json — Pre-generated engines (Stripe, Linear, Vercel, Notion)
-```
-
-## API Reference
-
-### `POST /api/crawl`
 ```json
 { "sourceUrl": "...", "targetUrl": "...", "sourceLocale": "en", "targetLocale": "de" }
 ```
-Returns: `{ pairs: AlignedPair[], sourceCount, targetCount }`
 
-### `POST /api/extract`
+Response:
+
 ```json
-{ "pairs": [...], "sourceLocale": "en", "targetLocale": "de", "companyName": "..." }
+{
+  "sourceUrl": "...",
+  "targetUrl": "...",
+  "sourceLocale": "en",
+  "targetLocale": "de",
+  "sourceNodes": [],
+  "targetNodes": [],
+  "alignedPairs": []
+}
 ```
-Returns: `{ extraction: ExtractionResult, engineConfig: EngineConfig }`
 
-### `POST /api/preview`
+### POST `/api/extract`
+
+Request:
+
 ```json
-{ "engineConfig": {...}, "targetLocale": "de" }
+{ "alignedPairs": [], "sourceLocale": "en", "targetLocale": "de", "companyName": "Stripe" }
 ```
-Returns: `{ samples: PreviewSample[], generic: string[], cloned: string[] }`
 
-### `GET /api/stats`
-Returns: `{ totalEngines, last24h, topCompany, topLocale }`
+Response:
 
-## Testing
+```json
+{ "extraction": {}, "engineConfig": {} }
+```
 
-Try these URL pairs:
-- `stripe.com` → `stripe.com/de` (en → de)
-- `linear.app` → `linear.app/de` (en → de)
-- `vercel.com` → `vercel.com/de` (en → de)
+### POST `/api/preview`
+
+Request:
+
+```json
+{ "engineConfig": {} }
+```
+
+Response:
+
+```json
+{ "sampleStrings": {}, "genericTranslations": {}, "clonedTranslations": {} }
+```
+
+### POST `/api/deploy`
+
+Request:
+
+```json
+{ "engineConfig": {}, "apiKey": "LINGO_API_KEY" }
+```
+
+Response:
+
+```json
+{ "ok": true, "report": {}, "model": "deterministic-mcp", "mcpCalls": [], "requestId": "dep_..." }
+```
+
+### GET `/api/stats`
+
+Response:
+
+```json
+{ "totalEngines": 0, "last24h": 0, "topCompany": null, "topLocale": null }
+```
+
+## Recommended Demo URL Pairs
+
+- `stripe.com` -> `stripe.com/de`
+- `shopify.com` -> `shopify.com/de`
+- `atlassian.com` -> `atlassian.com/de`
+
+## Project Structure
+
+```text
+src/
+  app/
+    page.tsx
+    compare/page.tsx
+    api/
+      crawl/route.ts
+      extract/route.ts
+      preview/route.ts
+      deploy/route.ts
+      stats/route.ts
+  components/
+    brand-voice-card.tsx
+    comparison-table.tsx
+    deploy-button.tsx
+    engine-display.tsx
+    glossary-table.tsx
+    instructions-list.tsx
+    scorer-badges.tsx
+    translation-preview.tsx
+    extraction-stepper.tsx
+    url-input-form.tsx
+  lib/
+    crawler.ts
+    aligner.ts
+    extractor.ts
+    engine-config.ts
+    lingo.ts
+    nvidia.ts
+    mcp-deploy.ts
+    supabase.ts
+    types.ts
+benchmark/
+  atlassian-engine-config.json
+  salesforce-engine-config.json
+  shopify-engine-config.json
+  stripe-engine-config.json
+```
 
 ## Built For
 
-[Lingo.dev Hackathon](https://lingo.dev) — demonstrating API-native localization intelligence with zero external dependencies.
+Lingo.dev Hackathon 2026.
 
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+"You just cloned years of localization behavior in under a minute" is the core product moment.

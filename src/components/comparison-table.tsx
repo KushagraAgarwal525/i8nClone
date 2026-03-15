@@ -44,7 +44,7 @@ export function ComparisonTable({ engines }: Props) {
             {engines.map((e) => (
               <td key={e.company} className="py-3 px-4 border-l border-[#1a1a1a] align-top">
                 <span className="text-xs font-mono bg-[#47c8ff15] text-[#47c8ff] border border-[#47c8ff30] px-2 py-0.5">
-                  {e.engineConfig.brandVoice.formality ?? "—"}
+                  {e.engineConfig.brandVoice.formality?.trim() || "—"}
                 </span>
               </td>
             ))}
@@ -57,7 +57,7 @@ export function ComparisonTable({ engines }: Props) {
             {engines.map((e) => (
               <td key={e.company} className="py-3 px-4 border-l border-[#1a1a1a] align-top">
                 <span className="text-xs font-mono bg-[#e8ff4715] text-[#e8ff47] border border-[#e8ff4730] px-2 py-0.5">
-                  {e.engineConfig.brandVoice.tone ?? "—"}
+                  {e.engineConfig.brandVoice.tone?.trim() || "—"}
                 </span>
               </td>
             ))}

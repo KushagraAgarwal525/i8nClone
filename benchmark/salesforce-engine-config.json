@@ -1,0 +1,105 @@
+{
+  "sourceLocale": "en",
+  "targetLocale": "de",
+  "companyName": "salesforce",
+  "brandVoice": {
+    "targetLocale": "de",
+    "text": "Write de copy in a Formal register with a Trusted, Innovative, Customer-Centric voice. Keep messaging precise, technically trustworthy, and action-oriented for product UI and developer-facing text. Follow these style constraints consistently: Use 'agentengesteuerte KI' to describe CRM, as seen in pairs 1 and 3. Use 'Kundenerfolg' to describe customer success, as seen in pairs 1 and 4. Preserve established product terminology and non-translatable terms such as Salesforce, Agentforce, CRM.",
+    "formality": "Formal",
+    "tone": "Trusted, Innovative, Customer-Centric"
+  },
+  "glossaryItems": [
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Salesforce",
+      "targetText": "Salesforce",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "Agentforce",
+      "targetText": "Agentforce",
+      "type": "non_translatable",
+      "hint": "Brand or product name - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "CRM",
+      "targetText": "CRM",
+      "type": "non_translatable",
+      "hint": "Technical acronym - kept in source language"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "customer relationship management",
+      "targetText": "agentengesteuerte KI",
+      "type": "custom_translation",
+      "hint": "Use 'agentengesteuerte KI' to describe CRM"
+    },
+    {
+      "sourceLocale": "en",
+      "targetLocale": "de",
+      "sourceText": "customer success",
+      "targetText": "Kundenerfolg",
+      "type": "custom_translation",
+      "hint": "Use 'Kundenerfolg' to describe customer success"
+    }
+  ],
+  "instructions": [
+    {
+      "name": "use-agentengesteuerte-ki-to-describe-crm",
+      "targetLocale": "de",
+      "text": "Use 'agentengesteuerte KI' to describe CRM, as seen in pairs 1 and 3."
+    },
+    {
+      "name": "use-kundenerfolg-to-describe-customer-su",
+      "targetLocale": "de",
+      "text": "Use 'Kundenerfolg' to describe customer success, as seen in pairs 1 and 4."
+    },
+    {
+      "name": "use-unified-platform-to-describe-salesfo",
+      "targetLocale": "de",
+      "text": "Use 'unified platform' to describe Salesforce, as seen in pairs 1 and 6."
+    },
+    {
+      "name": "use-customer-centric-to-describe-salesfo",
+      "targetLocale": "de",
+      "text": "Use 'customer-centric' to describe Salesforce, as seen in pairs 1 and 11."
+    }
+  ],
+  "scorers": [
+    {
+      "name": "check-for-agentengesteuerte-ki-usage",
+      "instruction": "Ensure 'agentengesteuerte KI' is used to describe CRM in all translations.",
+      "type": "boolean",
+      "sourceLocale": "en",
+      "targetLocale": "de"
+    },
+    {
+      "name": "check-for-kundenerfolg-usage",
+      "instruction": "Ensure 'Kundenerfolg' is used to describe customer success in all translations.",
+      "type": "boolean",
+      "sourceLocale": "en",
+      "targetLocale": "de"
+    },
+    {
+      "name": "check-for-unified-platform-usage",
+      "instruction": "Ensure 'unified platform' is used to describe Salesforce in all translations.",
+      "type": "boolean",
+      "sourceLocale": "en",
+      "targetLocale": "de"
+    },
+    {
+      "name": "check-for-customer-centric-usage",
+      "instruction": "Ensure 'customer-centric' is used to describe Salesforce in all translations.",
+      "type": "boolean",
+      "sourceLocale": "en",
+      "targetLocale": "de"
+    }
+  ]
+}

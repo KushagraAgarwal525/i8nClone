@@ -1,6 +1,7 @@
-﻿"use client";
+﻿﻿"use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { UrlInputForm } from "@/components/url-input-form";
 import { ExtractionStepper } from "@/components/extraction-stepper";
 import { EngineDisplay } from "@/components/engine-display";
@@ -27,6 +28,8 @@ const STEPS = [
   { id: "extract", label: "Extracting localization style" },
   { id: "preview", label: "Generating translation preview" },
 ];
+
+const RUNNING_STATES: FlowState[] = ["crawling", "extracting", "previewing"];
 
 function parseManualPairs(text: string): AlignedPair[] {
   return text
@@ -58,6 +61,10 @@ export default function HomePage() {
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("your brand");
+
+  const isRunning = RUNNING_STATES.includes(flowState);
+  const doneSteps = Object.values(stepStatuses).filter((s) => s === "done").length;
+  const totalSteps = STEPS.length;
 
   function setStep(id: string, status: StepStatus, detail?: string) {
     setStepStatuses((prev) => ({ ...prev, [id]: status }));
@@ -193,18 +200,28 @@ export default function HomePage() {
   }));
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#f0f0f0]">
+    <div className="min-h-screen bg-[#0a0a0a] text-[#f0f0f0] relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(232,255,71,0.09),transparent_35%),radial-gradient(circle_at_85%_20%,rgba(71,200,255,0.07),transparent_30%)]" />
       <main className="max-w-3xl mx-auto px-4 py-16">
+        <div className="relative">
         {/* Header */}
         <div className="mb-12">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-xs font-mono text-[#666] uppercase tracking-widest">
-              lingo.dev
-            </span>
-            <span className="text-[#333]">·</span>
-            <span className="text-xs font-mono text-[#e8ff47]">
-              engine clone
-            </span>
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-[#666] uppercase tracking-widest">
+                lingo.dev
+              </span>
+              <span className="text-[#333]">·</span>
+              <span className="text-xs font-mono text-[#e8ff47]">
+                engine clone
+              </span>
+            </div>
+            <Link
+              href="/compare"
+              className="text-xs font-mono border border-[#2b2b2b] px-3 py-1.5 text-[#9a9a9a] hover:text-[#f0f0f0] hover:border-[#4a4a4a] transition-colors"
+            >
+              View benchmark engines →
+            </Link>
           </div>
           <h1 className="text-4xl font-bold tracking-tight mb-3">
             Clone any translation engine
@@ -214,13 +231,18 @@ export default function HomePage() {
             localization engine that matches the brand voice, glossary, and
             rules of the original.
           </p>
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="text-xs font-mono text-[#7a7a7a] border border-[#1f1f1f] bg-[#0d0d0d] px-3 py-2">crawl + align web copy</div>
+            <div className="text-xs font-mono text-[#7a7a7a] border border-[#1f1f1f] bg-[#0d0d0d] px-3 py-2">extract voice + glossary + rules</div>
+            <div className="text-xs font-mono text-[#7a7a7a] border border-[#1f1f1f] bg-[#0d0d0d] px-3 py-2">preview + deploy to lingo</div>
+          </div>
         </div>
 
         {/* Input Form */}
         {(flowState === "idle" || flowState === "error") && (
           <section className="mb-10">
             <UrlInputForm
-              disabled={false}
+              disabled={isRunning}
               onSubmit={(d) => runPipeline(d)}
               onManualSubmit={(d) => {
                 const pairs = parseManualPairs(d.pairsText);
@@ -247,10 +269,13 @@ export default function HomePage() {
           flowState === "extracting" ||
           flowState === "previewing") && (
           <section className="mb-10">
-            <div className="mb-6">
+            <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
               <span className="text-xs font-mono text-[#666] uppercase tracking-widest">
                 Building engine for{" "}
                 <span className="text-[#e8ff47]">{companyName}</span>
+              </span>
+              <span className="text-xs font-mono text-[#777] border border-[#2b2b2b] bg-[#0d0d0d] px-2.5 py-1">
+                {doneSteps}/{totalSteps} complete
               </span>
             </div>
             <ExtractionStepper
@@ -263,7 +288,7 @@ export default function HomePage() {
         {/* Results */}
         {flowState === "done" && engineConfig && extraction && (
           <section>
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-8 gap-3 flex-wrap">
               <div>
                 <span className="text-xs font-mono text-[#666] uppercase tracking-widest block mb-1">
                   engine ready
@@ -273,10 +298,16 @@ export default function HomePage() {
                 </h2>
               </div>
               <button
-                onClick={() => setFlowState("idle")}
-                className="text-xs font-mono text-[#444] hover:text-[#f0f0f0] underline"
+                onClick={() => {
+                  setFlowState("idle");
+                  setEngineConfig(null);
+                  setExtraction(null);
+                  setPreview(null);
+                  setError(null);
+                }}
+                className="text-xs font-mono border border-[#2b2b2b] bg-[#0d0d0d] px-3 py-2 text-[#8a8a8a] hover:text-[#f0f0f0] hover:border-[#4a4a4a] transition-colors"
               >
-                Clone another →
+                ← Start new clone
               </button>
             </div>
             <EngineDisplay
@@ -286,6 +317,7 @@ export default function HomePage() {
             />
           </section>
         )}
+        </div>
       </main>
     </div>
   );
