@@ -3,7 +3,7 @@
 > Reverse-engineer any company's localization style into a deployable translation engine.
 
 Stripe spent years tuning their German copy style. Atlassian, Salesforce, and Shopify did too.
-EngineClone turns that visible but hard-to-extract translation behavior into a real engine config in seconds: brand voice, glossary, instructions, and scorer rules ready for deployment.
+EngineClone turns that visible but hard-to-extract translation behavior into a real engine config in seconds: brand voice, glossary, instructions, and scorer rules ready for deployment with ***one click***.
 
 Built for the [Lingo.dev Hackathon](https://lingo.dev), with Lingo.dev for localization workflows and NVIDIA-hosted LLMs for extraction and style cloning.
 
