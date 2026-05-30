@@ -273,3 +273,5 @@ benchmark/
 Lingo.dev Hackathon 2026.
 
 "You just cloned years of localization behavior in under a minute" is the core product moment.
+
+## Won First Place and Best Demo Prize
